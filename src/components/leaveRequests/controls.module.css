@@ -1,0 +1,37 @@
+.filter-controls-wrapper {
+    display: flex;
+    width: 100%;
+    gap: 20%;
+    padding: 2em;
+}
+
+.filter-control-label {
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid black;
+    padding: 5px;
+    height: min-content;
+    align-items: center;
+}
+
+.filter-control-label select {
+    min-width: 20%;
+}
+
+.filter-control-label div {
+    display: flex;
+    height: 100%;
+    gap: 5px;
+    align-items: center;
+}
+
+.filter-control-label svg {
+    height: 1em;
+}
+
+.controls-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    width: 20%;
+}

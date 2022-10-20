@@ -1,0 +1,82 @@
+.results-table {
+    width: 100%;
+    padding: 10px;
+    border-collapse: collapse;
+}
+
+.results-table tbody tr {
+    padding: 5px;
+}
+
+.results-table tr {
+    border-top: 2px solid grey;
+    border-bottom: 2px solid grey;
+}
+
+.results-table thead tr {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.results-table tbody tr:nth-child(odd) {
+    background: rgb(248, 245, 245)
+}
+
+.results-table tbody tr:nth-child(even),
+.results-table thead tr {
+    background: rgb(209, 208, 208)
+}
+
+.results-table tr {
+    display: flex;
+    align-items: center;
+}
+
+.results-table tr td {
+    flex: 2;
+}
+
+.results-table tr td:nth-child(1) {
+    flex: 1;
+}
+
+.results-table tr td:nth-child(3) {
+    flex: 4;
+}
+
+.event-type-name {
+    background-color: aquamarine;
+    padding: 5px;
+    font-weight: bold;
+    border-radius: 4px;
+    margin-right: 20px;
+}
+
+.event-details {
+    background-color: aquamarine;
+    padding: 5px;
+    font-weight: normal;
+}
+
+.event-details:empty {
+    display: none;
+}
+
+.pagination-buttons-wrapper {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.pagination-buttons-wrapper button {
+    font-size: 2em;
+}
+
+.results-table tbody tr:hover,
+.results-table tbody tr:focus-within,
+.results-table tbody tr:focus,
+.results-table tbody tr:active {
+    /* Easier understaindg which row is selected right now */
+    background: rgb(151, 143, 143);
+}
