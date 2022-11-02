@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useIsFirstRender from "./useIsFirstRender";
 
 export default function useAsync<T>(
   asyncAction: () => Promise<T>,
@@ -7,16 +8,21 @@ export default function useAsync<T>(
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error>();
   const [result, setResult] = useState<T>();
+  const [promise, setPromise] = useState<Promise<T>>(asyncAction);
+  const isFirstRender = useIsFirstRender();
 
   useEffect(() => {
     let invalidRes = false;
+
+    let actionPromise: Promise<T> = isFirstRender ? promise : asyncAction();
+
     setIsPending(true);
-    asyncAction()
+    if (!isFirstRender) setPromise(actionPromise);
+    actionPromise
       .then((res) => {
         if (!invalidRes) setResult(res);
       })
       .catch((err) => {
-        console.log(err);
         setError(err);
       })
       .finally(() => {
@@ -34,5 +40,6 @@ export default function useAsync<T>(
     isPending,
     error,
     result,
+    promise,
   };
 }

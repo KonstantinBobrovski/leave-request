@@ -1,30 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import PaginatedResponse from "../../utils/types/PaginatedResponse";
-import LeaveRequestTableControls, { ControlsValue } from "./controls";
-import Event from "../../utils/types/Event";
+import LeaveRequestTableControls, { ControlsValue } from "../filter";
 import LeaveRequestService from "../../services/LeaveRequestService";
 import { StoreType } from "../../store";
 import { useAppSelector } from "../../hooks/useAppSelector";
-import LeaveRequestStatus from "../../utils/types/LeaveRequestStatus";
+import LeaveRequestStatus from "../../types/LeaveRequestStatus";
 import useAsync from "../../hooks/useAsync";
 import styles from "./table.module.css";
-import DateToString from "../../utils/func/dateToString";
+import moment from "moment";
+import { Table, Button } from "react-bootstrap";
+
 const getAccessToken = (state: StoreType) => state.user.accessToken;
 
 const LeaveRequestTable = () => {
-  const access = useAppSelector(getAccessToken);
+  const access = useAppSelector(getAccessToken) as string;
 
   const [fetchQuery, setFetchQuery] = useState<ControlsValue>({
-    startDate: new Date(new Date().getFullYear(), 0, 1, 1)
-      .toISOString()
-      .split("T")[0],
-    endDate: new Date(new Date().getFullYear(), 11, 1, 1)
-      .toISOString()
-      .split("T")[0],
+    startDate: moment().startOf("year").format("YYYY-MM-DD"),
+    endDate: moment().endOf("year").format("YYYY-MM-DD"),
   } as any);
 
   const [page, setPage] = useState(1);
-
+  //
+  //TOOLKIT MOMENT BOOTSTRAP3
   const {
     isPending,
     result: events,
@@ -43,25 +40,12 @@ const LeaveRequestTable = () => {
         from: fetchQuery?.startDate,
         to: fetchQuery?.endDate,
         pageNumber: page,
+        employee: fetchQuery?.selectedEmployee,
+        includeEx: fetchQuery.includeEx,
+        onlyExplanationNotes: fetchQuery.includeNote,
       }),
     [fetchQuery, access, page]
   );
-
-  const filtredEvents = useMemo(() => {
-    const items = (events?.items || []).filter(
-      //if selectedEmployee is 'all' it will be true and every object passes otherwies it checks id for selected AND if there note checkbox checks it
-      (el) =>
-        (fetchQuery.selectedEmployee === "all" ||
-          el.employee.uuid === fetchQuery.selectedEmployee) &&
-        (!fetchQuery.includeNote || el.explanationNote) &&
-        (!fetchQuery.includeEx || !el.employee.isEx)
-    );
-    return {
-      ...events,
-      items,
-      itemsCount: items.length,
-    };
-  }, [events, fetchQuery]);
 
   const onQueryChange = useCallback((val: ControlsValue) => {
     setFetchQuery(val);
@@ -69,11 +53,9 @@ const LeaveRequestTable = () => {
 
   return (
     <>
-      <LeaveRequestTableControls
-        onQueryChange={onQueryChange}
-        employees={events?.items?.map((e) => e.employee) ?? []}
-      />
-      <table className={styles["results-table"]}>
+      <LeaveRequestTableControls onQueryChange={onQueryChange} />
+
+      <Table striped bordered>
         <thead>
           <tr>
             <td></td>
@@ -88,51 +70,70 @@ const LeaveRequestTable = () => {
         </thead>
         <tbody>
           {!isPending &&
-            filtredEvents?.items?.map((el) => (
+            events?.items?.map((el) => (
               <tr key={el.uuid}>
                 <td>
                   <div>Edit</div>
                   <div>Cancel</div>
                 </td>
-                <td>{el.employee.name}</td>
+                <td className={styles["employee-name"]}>{el.employee.name}</td>
                 <td>
-                  <div className={styles["event-type-name"]}>
-                    {el.eventType.name}
-                    <div className={styles["event-details"]}>{el.details}</div>
+                  <div className={styles["event-type"]}>
+                    <div className={styles["event-type-title"]}>
+                      {el.eventType.name}
+                    </div>
+                    <div className={styles["event-type-details"]}>
+                      {el.details}
+                    </div>
                   </div>
 
-                  <div>{el.workPattern.name} </div>
+                  <div className={styles["work-pattern"]}>
+                    Using work pattern "{el.workPattern.name}"
+                  </div>
                   {el.status == LeaveRequestStatus.Approved &&
                     el?.coverEmployee && (
                       <div>
-                        Approved by: {el?.coverEmployee?.name} on
-                        {DateToString(new Date(Date.parse(el.creationDate)))}
+                        Approved by: {el?.coverEmployee?.name}
+                        {
+                          // TODO: In the task there is date of approving but the api do not returns it so after migrating to normal api add this field
+                        }
                       </div>
                     )}
                 </td>
-                <td>{DateToString(new Date(Date.parse(el.creationDate)))}</td>
-                <td>{DateToString(new Date(Date.parse(el.startDate)))}</td>
-                <td>{DateToString(new Date(Date.parse(el.endDate)))}</td>
                 <td>
-                  {el?.duration} day<small>(s)</small>
+                  {moment.utc(el.creationDate).format("dddd DD/MM/YYYY HH:mm")}
+                </td>
+                <td>{moment.utc(el.startDate).format("dddd DD/MM/YYYY")}</td>
+                <td>{moment.utc(el.endDate).format("dddd DD/MM/YYYY")}</td>
+                <td>
+                  {el?.duration} {el.isInHours ? "hour" : "day"}
+                  <small>(s)</small>
                 </td>
                 <td>{el.status}</td>
               </tr>
             ))}
         </tbody>
-      </table>
+      </Table>
+
       {isPending && <h1>Loading page {page}</h1>}
-      {!isPending && filtredEvents?.itemsCount === 0 && (
-        <h1>There are no such events</h1>
+
+      {
+        //TODO: IN production check the reason of the error
+        !isPending && error && (
+          <h2 role="alert">An error occurred please try again later</h2>
+        )
+      }
+      {!isPending && events?.itemsCount === 0 && (
+        <h2 role="alert">There are no such events</h2>
       )}
       <div className={styles["pagination-buttons-wrapper"]}>
-        <button
+        <Button
           style={{ display: page > 1 ? "initial" : "none" }}
           onClick={() => setPage((p) => p - 1)}
         >
           Previous page
-        </button>
-        <button
+        </Button>
+        <Button
           style={{
             display:
               !isPending &&
@@ -144,7 +145,7 @@ const LeaveRequestTable = () => {
           onClick={() => setPage((p) => p + 1)}
         >
           Next page
-        </button>
+        </Button>
         {page > 1 && events?.itemsCount == events?.pageSize && (
           <h2>There are no more pages</h2>
         )}

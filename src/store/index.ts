@@ -1,6 +1,12 @@
-import { createStore } from "redux";
-import rootReducer from "./reducers";
-const store = createStore(rootReducer);
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import userReducer from "./reducers/user.slice";
+const rootReducer = combineReducers({
+  user: userReducer,
+});
+
+const store = configureStore({
+  reducer: rootReducer,
+});
 
 type StoreType = ReturnType<typeof store.getState>;
 

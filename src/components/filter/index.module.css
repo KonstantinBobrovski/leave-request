@@ -1,8 +1,11 @@
 .filter-controls-wrapper {
-    display: flex;
     width: 100%;
     gap: 20%;
     padding: 2em;
+    justify-content: space-around;
+    height: fit-content;
+    display: block;
+    clear: both;
 }
 
 .filter-control-label {
@@ -14,24 +17,22 @@
     align-items: center;
 }
 
-.filter-control-label select {
-    min-width: 20%;
-}
-
-.filter-control-label div {
-    display: flex;
-    height: 100%;
-    gap: 5px;
-    align-items: center;
-}
-
-.filter-control-label svg {
-    height: 1em;
-}
-
 .controls-column {
     display: flex;
     flex-direction: column;
     gap: 1em;
     width: 20%;
+}
+
+
+/* Workaround for nicer display */
+
+:global(.react-datepicker-wrapper) {
+    display: initial !important;
+    width: auto !important;
+}
+
+.date-picker-calendar {
+    transform: scale(1.5);
+    transform-origin: top;
 }

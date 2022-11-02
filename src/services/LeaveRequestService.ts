@@ -1,19 +1,23 @@
 import { API_ROOT } from "../utils/consts";
-import PaginatedResponse from "../utils/types/PaginatedResponse";
-import { Workgroup } from "../utils/types/Workgroups";
-import Event from "../utils/types/Event";
-import LeaveRequestStatus from "../utils/types/LeaveRequestStatus";
-import EventType from "../utils/types/EventType";
+import PaginatedResponse from "../types/PaginatedResponse";
+import { Workgroup } from "../types/Workgroups";
+import Event from "../types/Event";
+import LeaveRequestStatus from "../types/LeaveRequestStatus";
+import EventType from "../types/EventType";
+import ReFetcher from "../utils/func/reFetcher";
+import Employee from "../types/Employee";
+import moment from "moment";
 
 type GetEventsQuery = {
-  from: string;
-  to: string;
+  from: Date;
+  to: Date;
   pageNumber?: number;
   eventType?: string;
   workgroup?: string;
   status?: LeaveRequestStatus;
-  OnlyExplanationNotes?: boolean;
-  IncludeEx?: boolean;
+  onlyExplanationNotes?: boolean;
+  includeEx?: boolean;
+  employee?: string;
 };
 
 const serialize = function (obj: any) {
@@ -24,23 +28,6 @@ const serialize = function (obj: any) {
     }
   return str.join("&");
 };
-
-//API allows up to 3 req per second so we should try
-//TODO: add max refetch attemps for production code
-function ReFetcher(url: string, options?: RequestInit): Promise<Response> {
-  return new Promise(async (res, rej) => {
-    try {
-      const response = await fetch(url, options);
-      if (response.status > 299) throw new Error("Response status is not 2XX");
-      res(response);
-    } catch (err) {
-      setTimeout(async () => {
-        const response = await ReFetcher(url, options);
-        res(response);
-      }, Math.random() * 2000 + 500);
-    }
-  });
-}
 
 export default class LeaveRequestService {
   static GetWorkgroups(token: string): Promise<Workgroup[]> {
@@ -62,16 +49,15 @@ export default class LeaveRequestService {
     token: string,
     query: GetEventsQuery
   ): Promise<PaginatedResponse<Event>> {
-    console.log(query);
-
     //filter all null and undefined values
     const finalQuery: GetEventsQuery = (
       Object.keys(query) as (keyof GetEventsQuery)[]
     ).reduce((acc, key) => {
-      if (query[key] === "all" || query[key] === "All") return acc;
+      if (query[key]?.toString().toLocaleLowerCase() === "all") return acc;
       if (key === "from")
-        return { ...acc, from: query.from + "T00:00:00.000Z" };
-      else if (key === "to") return { ...acc, to: query.to + "T00:00:00.000Z" };
+        return { ...acc, from: moment(query.from).toISOString() };
+      else if (key === "to")
+        return { ...acc, to: moment(query.to).toISOString() };
       else if (query[key] === undefined || query[key] === null) return acc;
       else return { ...acc, [key]: query[key] };
     }, {} as any);
@@ -80,6 +66,53 @@ export default class LeaveRequestService {
       headers: {
         Authorization: "Bearer " + token,
       },
-    }).then((res) => res.json());
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        //TODO: DELETE THIS AFTER API RECEIVE NORMAL FILTERING
+        const events = res as PaginatedResponse<Event>;
+        const items = (events?.items || []).filter(
+          (el) =>
+            (!finalQuery.employee ||
+              el.employee.uuid === finalQuery.employee) &&
+            (!finalQuery.onlyExplanationNotes || el.explanationNote) &&
+            (!finalQuery.includeEx || !el.employee.isEx)
+        );
+
+        return {
+          ...events,
+          items,
+          itemsCount: items.length,
+        };
+      });
+  }
+
+  static GetEmployees(token: string): Promise<Employee[]> {
+    //TODO: ADD API ENDPOINT FOR THIS TEMPORARY DUMMY WAY
+    // now just get a big amount of time and retruns workers
+    return ReFetcher(
+      API_ROOT +
+        "public/v1/events?" +
+        serialize({
+          from: "2010-01-01T00:00:00.000Z",
+          to: "2033-01-01T00:00:00.000Z",
+        }),
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => {
+        //TODO: DELETE THIS AFTER API RECEIVE NORMAL FILTERING
+        const events = res as PaginatedResponse<Event>;
+        return events.items
+          .map((event) => event.employee)
+          .reduce((acc, currEmp) => {
+            if (acc.find((emp) => emp.uuid === currEmp.uuid)) return acc;
+            return [...acc, currEmp];
+          }, [] as Employee[]);
+      });
   }
 }

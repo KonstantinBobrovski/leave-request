@@ -1,1 +1,1 @@
-export const API_ROOT = "https://api.leavewizard.com/";
+export const API_ROOT = "https://api-beta.leavewizard.com/";

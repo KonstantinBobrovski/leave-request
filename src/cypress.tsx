@@ -1,6 +1,7 @@
+//THIS IS SETUP FILE THE UNIT TEST ARE NEAR TO DESCRIBED COMPONENTS
+
 import { mount } from "cypress/react18";
 import { Provider } from "react-redux";
-import LeaveRequestService from "./services/LeaveRequestService";
 import store from "./store";
 
 declare global {
